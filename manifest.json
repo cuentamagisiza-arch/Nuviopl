@@ -1,24 +1,17 @@
-[
-  {
-    "id": "fuegocine",
-    "name": "FuegoCine",
-    "description": "Proveedor de FuegoCine",
-    "version": "1.0.0",
-    "author": "cuentamagisiza-arch",
-    "supportedTypes": [
-      "movie",
-      "tv"
-    ],
-    "filename": "providers/fuegocine.js",
-    "enabled": true,
-    "contentLanguage": [
-      "es"
-    ],
-    "formats": [
-      "mp4",
-      "m3u8"
-    ],
-    "limited": false,
-    "supportsExternalPlayer": true
-  }
-]
+{
+  "id": "fuegocine",
+  "version": "1.0.0",
+  "name": "FuegoCine",
+  "description": "Proveedor de FuegoCine",
+  "resources": [
+    "stream"
+  ],
+  "types": [
+    "movie",
+    "series"
+  ],
+  "idPrefixes": [
+    "tt",
+    "tmdb:"
+  ]
+}
