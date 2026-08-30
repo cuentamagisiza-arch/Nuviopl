@@ -1,0 +1,9 @@
+{
+  "id": "fuegocine",
+  "version": "1.0.0",
+  "name": "FuegoCine",
+  "description": "Contenido público de FuegoCine",
+  "resources": ["stream"],
+  "types": ["movie", "series"],
+  "idPrefixes": ["tt", "tmdb:"]
+}
