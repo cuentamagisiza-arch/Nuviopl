@@ -5,9 +5,9 @@
     {
       "id": "fuegocine",
       "name": "FuegoCine",
-      "description": "Proveedor de FuegoCine",
+      "description": "FuegoCine - API Modlyo",
       "version": "1.0.0",
-      "author": "cuentamagisiza-arch",
+      "author": "FuegoCine",
       "supportedTypes": [
         "movie",
         "tv"
@@ -26,3 +26,4 @@
     }
   ]
 }
+
