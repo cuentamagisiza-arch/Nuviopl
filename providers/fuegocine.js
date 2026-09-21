@@ -2825,8 +2825,7 @@ var require_tmdb = __commonJS({
   }
 });
 
-              
-// src/fuegocine/index.js
+  // src/fuegocine/index.js
 
 var { fetchJson, getStealthHeaders } = require_http();
 var { finalizeStreams } = require_engine();
@@ -2848,40 +2847,19 @@ function normalizeLanguage(lang) {
   var l = String(lang).toLowerCase().trim();
 
   if (
-    l.includes("latino") ||
-    l.includes("mex") ||
-    l.includes("col") ||
-    l.includes("arg") ||
-    l.includes("chi") ||
-    l.includes("per") ||
-    l.includes("dub")
-  ) {
-    return "Latino";
-  }
-
-  if (
+    l.includes("es_es") ||
+    l.includes("es-es") ||
     l.includes("esp") ||
-    l.includes("castellano") ||
-    l.includes("cast") ||
-    l === "es_es" ||
-    l === "es-es"
+    l.includes("castellano")
   ) {
     return "Castellano";
   }
 
   if (
     l.includes("sub") ||
-    l.includes("vose")
+    l.startsWith("en")
   ) {
     return "Subtitulado";
-  }
-
-  if (
-    l === "en" ||
-    l.includes("eng") ||
-    l.includes("ingles")
-  ) {
-    return "Inglés";
   }
 
   return "Latino";
@@ -2900,11 +2878,11 @@ function normalizeQuality(value) {
     return "1440p";
   }
 
-  if (q.includes("1080") || q.includes("FHD")) {
+  if (q.includes("1080")) {
     return "1080p";
   }
 
-  if (q.includes("720") || q.includes("HD")) {
+  if (q.includes("720")) {
     return "720p";
   }
 
@@ -2926,16 +2904,18 @@ function isDirectVideo(url) {
 
   return (
     u.includes(".m3u8") ||
-    u.includes(".mp4") ||
-    u.includes(".mkv") ||
-    u.includes(".webm")
+    u.includes(".mp4")
   );
 }
 
-function getDirectHeaders(url) {
+function getVideoHeaders(url) {
   try {
     var parsed = new URL(url);
-    var origin = parsed.origin;
+
+    var origin =
+      parsed.protocol +
+      "//" +
+      parsed.hostname;
 
     return {
       "User-Agent":
@@ -2944,12 +2924,18 @@ function getDirectHeaders(url) {
       "Origin": origin
     };
   } catch (e) {
-    return API_HEADERS;
+    return DEFAULT_HEADERS;
   }
 }
 
-function buildApiUrl(tmdbId, mediaType, season, episode) {
-  var cleanId = String(tmdbId).split(":")[0];
+function buildApiUrl(
+  tmdbId,
+  mediaType,
+  season,
+  episode
+) {
+  var cleanId =
+    String(tmdbId).split(":")[0];
 
   var type =
     mediaType === "movie" ||
@@ -2957,25 +2943,31 @@ function buildApiUrl(tmdbId, mediaType, season, episode) {
       ? "movie"
       : "tv";
 
-  var params =
-    "tmdbId=" +
+  var url =
+    API_URL +
+    "?tmdbId=" +
     encodeURIComponent(cleanId) +
     "&type=" +
     encodeURIComponent(type);
 
   if (type === "tv") {
-    if (season == null || episode == null) {
+    if (
+      season == null ||
+      episode == null
+    ) {
       return null;
     }
 
-    params +=
+    url +=
       "&season=" +
-      encodeURIComponent(String(season)) +
+      encodeURIComponent(String(season));
+
+    url +=
       "&episode=" +
       encodeURIComponent(String(episode));
   }
 
-  return API_URL + "?" + params;
+  return url;
 }
 
 function getStreams(
@@ -2986,23 +2978,28 @@ function getStreams(
   title
 ) {
   return __async(this, null, function* () {
-    var visualLogs = [];
+    var logs = [];
 
     function log(message) {
-      visualLogs.push({
+      logs.push({
         name: "🔥 FUEGO CINE",
         title: message,
-        url: "https://log.info/" + Math.random(),
+        url:
+          "https://log.info/" +
+          Math.random(),
         headers: {}
       });
 
-      console.log("[FuegoCine] " + message);
+      console.log(
+        "[FuegoCine] " +
+          message
+      );
     }
 
     try {
       if (!tmdbId) {
-        log("Error: TMDB ID vacío");
-        return visualLogs;
+        log("TMDB ID vacío");
+        return logs;
       }
 
       var apiUrl = buildApiUrl(
@@ -3013,235 +3010,286 @@ function getStreams(
       );
 
       if (!apiUrl) {
-        log("Error: faltan season/episode");
-        return visualLogs;
+        log(
+          "Faltan temporada o episodio"
+        );
+        return logs;
       }
 
       log(
-        "Consultando Modlyo: " +
-          tmdbId +
-          " / " +
-          mediaType +
-          (mediaType === "tv" || mediaType === "series"
-            ? " " + season + "x" + episode
-            : "")
+        "Consultando Modlyo..."
       );
 
-      var data = yield fetchJson(apiUrl, {
-        headers: API_HEADERS
-      });
+      var data =
+        yield fetchJson(apiUrl, {
+          headers: API_HEADERS
+        });
 
       if (!data) {
-        log("Modlyo: respuesta vacía");
-        return visualLogs;
+        log(
+          "Modlyo no respondió"
+        );
+        return logs;
       }
 
       if (data.success !== true) {
-        log("Modlyo: success=false");
-        return visualLogs;
+        log(
+          "Modlyo respondió success=false"
+        );
+        return logs;
       }
 
       if (!Array.isArray(data.streams)) {
-        log("Modlyo: no hay streams");
-        return visualLogs;
+        log(
+          "Modlyo no devolvió streams"
+        );
+        return logs;
       }
 
       if (data.streams.length === 0) {
-        log("Modlyo: 0 servidores");
-        return visualLogs;
+        log(
+          "Modlyo devolvió 0 servidores"
+        );
+        return logs;
       }
 
       log(
-        "Modlyo: encontrados " +
-          data.streams.length +
-          " servidores"
+        "Servidores encontrados: " +
+          data.streams.length
       );
 
       var streams = [];
 
-      var results = yield Promise.allSettled(
-        data.streams.map(function (item) {
-          return __async(this, null, function* () {
-            try {
-              if (!item || !item.servidor_url) {
-                return null;
-              }
+      var results =
+        yield Promise.allSettled(
+          data.streams.map(
+            function (item) {
+              return __async(
+                this,
+                null,
+                function* () {
+                  try {
+                    if (
+                      !item ||
+                      !item.servidor_url
+                    ) {
+                      return null;
+                    }
 
-              var originalUrl =
-                String(item.servidor_url).trim();
+                    var sourceUrl =
+                      String(
+                        item.servidor_url
+                      ).trim();
 
-              if (!originalUrl) {
-                return null;
-              }
+                    if (!sourceUrl) {
+                      return null;
+                    }
 
-              var serverName =
-                item.servidor_nombre ||
-                "Modlyo";
+                    var server =
+                      item.servidor_nombre ||
+                      "Modlyo";
 
-              var lang =
-                normalizeLanguage(item.idioma);
+                    var lang =
+                      normalizeLanguage(
+                        item.idioma
+                      );
 
-              var quality =
-                normalizeQuality(item.calidad);
+                    var quality =
+                      normalizeQuality(
+                        item.calidad
+                      );
 
-              log(
-                "Servidor: " +
-                  serverName +
-                  " • " +
-                  quality +
-                  " • " +
-                  lang
-              );
+                    log(
+                      server +
+                        " • " +
+                        quality +
+                        " • " +
+                        lang
+                    );
 
-              /*
-               * Si Modlyo ya entrega un archivo o
-               * playlist directo, NO lo pasamos por
-               * un resolver.
-               */
-              if (isDirectVideo(originalUrl)) {
-                log(
-                  "✓ Enlace directo: " +
-                    serverName
-                );
+                    /*
+                     * CASO 1:
+                     * Modlyo ya nos entrega
+                     * un .m3u8 o .mp4.
+                     *
+                     * NO usamos resolver.
+                     */
+                    if (
+                      isDirectVideo(
+                        sourceUrl
+                      )
+                    ) {
+                      log(
+                        "Enlace directo detectado"
+                      );
 
-                return {
-                  langLabel: lang,
-                  language: lang,
-                  serverLabel: serverName,
-                  serverName: serverName,
-                  url: originalUrl,
-                  quality: quality,
-                  headers: getDirectHeaders(
-                    originalUrl
-                  ),
-                  verified: false,
-                  isReal: true
-                };
-              }
+                      return {
+                        langLabel: lang,
+                        language: lang,
+                        serverLabel: server,
+                        serverName: server,
+                        url: sourceUrl,
+                        quality: quality,
+                        headers:
+                          getVideoHeaders(
+                            sourceUrl
+                          ),
+                        verified: false,
+                        isReal: true
+                      };
+                    }
 
-              /*
-               * Si es un embed, utilizamos los
-               * resolvers que YA existen en tu
-               * providers/fuegocine.js.
-               */
-              var resolved =
-                yield resolveEmbed(
-                  originalUrl
-                );
+                    /*
+                     * CASO 2:
+                     * Es un enlace de embed.
+                     */
+                    var resolved =
+                      yield resolveEmbed(
+                        sourceUrl
+                      );
 
-              if (
-                resolved &&
-                resolved.url
-              ) {
-                log(
-                  "✓ Resuelto: " +
-                    serverName
-                );
-
-                return {
-                  langLabel: lang,
-                  language: lang,
-                  serverLabel:
-                    resolved.serverName ||
-                    serverName,
-                  serverName:
-                    resolved.serverName ||
-                    serverName,
-                  url: resolved.url,
-                  quality:
-                    resolved.quality ||
-                    quality,
-                  headers:
-                    resolved.headers ||
-                    getDirectHeaders(
+                    /*
+                     * Aceptamos el resultado aunque
+                     * verified no sea true, siempre
+                     * que exista una URL.
+                     *
+                     * Esto es importante para evitar
+                     * perder streams válidos.
+                     */
+                    if (
+                      resolved &&
                       resolved.url
-                    ),
-                  verified:
-                    resolved.verified === true,
-                  isReal:
-                    resolved.isReal === true
-                };
-              }
+                    ) {
+                      log(
+                        "✓ Resolver: " +
+                          server
+                      );
 
-              /*
-               * Algunos servidores pueden entregar
-               * una URL válida que no necesita resolver.
-               * La conservamos como último recurso.
-               */
-              log(
-                "⚠ Sin resolver: " +
-                  serverName
+                      return {
+                        langLabel: lang,
+                        language: lang,
+
+                        serverLabel:
+                          resolved.serverName ||
+                          server,
+
+                        serverName:
+                          resolved.serverName ||
+                          server,
+
+                        url:
+                          resolved.url,
+
+                        quality:
+                          resolved.quality ||
+                          quality,
+
+                        headers:
+                          resolved.headers ||
+                          getVideoHeaders(
+                            resolved.url
+                          ),
+
+                        verified:
+                          resolved.verified ===
+                          true,
+
+                        isReal:
+                          resolved.isReal ===
+                          true
+                      };
+                    }
+
+                    /*
+                     * Último recurso:
+                     * conservamos el servidor.
+                     */
+                    log(
+                      "⚠ Resolver no extrajo enlace: " +
+                        server
+                    );
+
+                    return {
+                      langLabel: lang,
+                      language: lang,
+                      serverLabel: server,
+                      serverName: server,
+                      url: sourceUrl,
+                      quality: quality,
+                      headers:
+                        getVideoHeaders(
+                          sourceUrl
+                        ),
+                      verified: false,
+                      isReal: false
+                    };
+                  } catch (err) {
+                    log(
+                      "Error en " +
+                        (item.servidor_nombre ||
+                          "servidor") +
+                        ": " +
+                        (err &&
+                        err.message
+                          ? err.message
+                          : String(err))
+                    );
+
+                    return null;
+                  }
+                }
               );
-
-              return {
-                langLabel: lang,
-                language: lang,
-                serverLabel: serverName,
-                serverName: serverName,
-                url: originalUrl,
-                quality: quality,
-                headers:
-                  getDirectHeaders(
-                    originalUrl
-                  ),
-                verified: false,
-                isReal: false
-              };
-
-            } catch (error) {
-              console.log(
-                "[FuegoCine] Error servidor:",
-                error &&
-                  error.message
-                  ? error.message
-                  : error
-              );
-
-              return null;
             }
-          });
-        })
-      );
+          )
+        );
 
-      results.forEach(function (result) {
-        if (
-          result.status === "fulfilled" &&
-          result.value &&
-          result.value.url
-        ) {
-          streams.push(result.value);
+      results.forEach(
+        function (result) {
+          if (
+            result.status ===
+              "fulfilled" &&
+            result.value &&
+            result.value.url
+          ) {
+            streams.push(
+              result.value
+            );
+          }
         }
-      });
+      );
 
       if (streams.length === 0) {
         log(
-          "No se pudo obtener ningún enlace"
+          "No se obtuvo ningún enlace"
         );
-        return visualLogs;
+        return logs;
       }
 
       log(
-        "Streams utilizables: " +
+        "Enlaces obtenidos: " +
           streams.length
       );
 
       /*
-       * Pasamos los streams por el mismo engine
-       * que ya utilizaba tu plugin.
+       * Utilizamos el engine que YA existe
+       * en tu plugin.
        */
       var finalStreams =
         yield finalizeStreams(
           streams,
           "FuegoCine",
-          title || "FuegoCine"
+          title ||
+            "FuegoCine"
         );
 
       if (
-        Array.isArray(finalStreams) &&
+        Array.isArray(
+          finalStreams
+        ) &&
         finalStreams.length > 0
       ) {
         log(
-          "✓ Streams finales: " +
+          "Streams finales: " +
             finalStreams.length
         );
 
@@ -3249,57 +3297,66 @@ function getStreams(
       }
 
       /*
-       * Si finalizeStreams descarta todo,
-       * devolvemos los streams originales para
-       * no perder enlaces válidos.
+       * Si el engine descarta los enlaces,
+       * todavía devolvemos los originales.
        */
       log(
-        "Engine no devolvió streams; usando enlaces originales"
+        "Engine no validó los streams; devolviendo originales"
       );
 
-      return streams.map(function (stream) {
-        return {
-          name:
-            "FuegoCine - " +
-            (stream.quality || "HD"),
-          title:
-            (stream.language ||
-              stream.langLabel ||
-              "Latino") +
-            " - " +
-            (stream.serverName ||
-              stream.serverLabel ||
-              "Servidor"),
-          url: stream.url,
-          quality:
-            stream.quality || "HD",
-          verified:
-            stream.verified === true,
-          isReal:
-            stream.isReal === true,
-          provider:
-            stream.serverName ||
-            stream.serverLabel ||
-            "Servidor",
-          language:
-            stream.language ||
-            stream.langLabel ||
-            "Latino",
-          headers:
-            stream.headers ||
-            DEFAULT_HEADERS
-        };
-      });
+      return streams.map(
+        function (stream) {
+          return {
+            name:
+              "FuegoCine - " +
+              (stream.quality ||
+                "HD"),
 
-    } catch (error) {
+            title:
+              (stream.language ||
+                "Latino") +
+              " - " +
+              (stream.serverName ||
+                "Servidor"),
+
+            url: stream.url,
+
+            quality:
+              stream.quality ||
+              "HD",
+
+            verified:
+              stream.verified ===
+              true,
+
+            isReal:
+              stream.isReal ===
+              true,
+
+            provider:
+              stream.serverName ||
+              "Servidor",
+
+            language:
+              stream.language ||
+              "Latino",
+
+            headers:
+              stream.headers ||
+              DEFAULT_HEADERS
+          };
+        }
+      );
+    } catch (e) {
       log(
-        "Error: " +
-          (error && error.message
-            ? error.message
-            : String(error))
+        "Fallo fatal: " +
+          (e &&
+          e.message
+            ? e.message
+            : String(e))
       );
 
-      return visualLogs;
+      return logs;
     }
   });
 }
@@ -3307,5 +3364,5 @@ function getStreams(
 module.exports = {
   getStreams
 };
-
-
+            
+    
