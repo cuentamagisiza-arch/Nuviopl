@@ -167,6 +167,12 @@ function getStreams(tmdbId, mediaType, season, episode) {
         data.streams.length
       );
 
+      console.log(
+  "[FuegoCine] DATOS:",
+  JSON.stringify(data.streams)
+);
+      
+
       return data.streams
         .filter(function(stream) {
           return (
